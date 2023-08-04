@@ -22,24 +22,18 @@ if __name__ == "__main__":
     AR = 1
     WINDOW_WIDTH = AR * WINDOW_HEIGHT
 
-    N = 500
+    N = 5000
 
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
     rule = 0
 
     if rule == 0:
-        alignment = gui.slider("align", 0, 20, 0.01)
-        alignment.value = 1
-        separation = gui.slider("separate", 0, 20, 0.01)
-        separation.value = 1
-        cohesion = gui.slider("cohere", 0, 20, 0.01)
-        cohesion.value = 1
         rng = default_rng(seed=42)
         boid = Boid(N, 1e-2,
-                    alignment.value, separation.value, cohesion.value,
+                    2.0, 2.0, 2.0,
                     1, 0.5,
-                    distant=0.15, topo_num=7,
+                    distant=0.15, topo_num=49,
                     pos=rng.random(size=(N, 2), dtype=np.float32),
                     vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32)
                     )

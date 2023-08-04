@@ -13,66 +13,73 @@ class NeighborSearch:
         self.neighbor_num_max = neighbor_num_max
         self.num = num
         self.position = position
-        self.distant = distant
+        self.distant0 = distant
         self.topo_num = topo_num
         self.neighbors = ti.field(int, shape=(num, neighbor_num_max))
         self.neighbors.fill(-1)
         self.neighbors_num = ti.field(int, shape=num)
+
+        # topo_search temp
+        self.distant = ti.field(ti.f32, shape=(num, num-1))
+        self.index = ti.field(int, shape=(num, num-1))
+        self.indices = ti.field(int, shape=(num, num-1))
 
     @ti.kernel
     def distant_search(self):
         for i in range(self.num):
             cnt = 0
             for j in range(self.num):
-                if (self.position[i] - self.position[j]).norm() < self.distant and i != j:
+                if (self.position[i] - self.position[j]).norm() < self.distant0 and i != j:
                     self.neighbors[i, cnt] = j
                     cnt += 1
             self.neighbors_num[i] = cnt
 
     @ti.func
-    def partition_with_indices(self, arr, indices, left, right):
-        pivot_value = arr[indices[right]]
+    def partition_with_indices(self, m, left, right):
+        pivot_value = self.distant[m, self.indices[m, right]]
         i = left - 1
 
         for j in range(left, right):
-            if arr[indices[j]] <= pivot_value:
+            if self.distant[m, self.indices[m, j]] <= pivot_value:
                 i += 1
-                indices[i], indices[j] = indices[j], indices[i]
-
-        indices[i + 1], indices[right] = indices[right], indices[i + 1]
-        return i + 1, indices
+                t = self.indices[m, i]
+                self.indices[m, i] = self.indices[m, j]
+                self.indices[m, j] = t
+        t = self.indices[m, i+1]
+        self.indices[m, i+1] = self.indices[m, right]
+        self.indices[m, right] = t
+        return i + 1
 
     @ti.func
-    def k_smallest_with_indices(self, arr):
-        k = self.topo_num
-        left, right = 0, len(arr) - 1
-        indices = ti.Vector([i for i in range(len(arr))])
-        while left <= right:
-            pivot_index, indices = self.partition_with_indices(arr, indices, left, right)
+    def init_indices(self, i):
+        for j in range(self.num - 1):
+            self.indices[i, j] = j
 
-            if pivot_index == k - 1:
+    @ti.func
+    def k_smallest_with_indices(self, i):
+        left, right = 0, self.num - 1 - 1
+        self.init_indices(i)
+        while left <= right:
+            pivot_index = self.partition_with_indices(i, left, right)
+
+            if pivot_index == self.topo_num - 1:
                 break
-            elif pivot_index > k - 1:
+            elif pivot_index > self.topo_num - 1:
                 right = pivot_index - 1
             else:
                 left = pivot_index + 1
-        ret = ti.Vector([0 for _ in range(100)])
-        for i in range(k):
-            ret[i] = indices[i]
-        return ret
 
     @ti.kernel
     def topo_search(self):
         for i in range(self.num):
             cnt = 0
-            distant = ti.Vector([0.0 for _ in range(self.num - 1)])
-            index = ti.Vector([0 for _ in range(self.num - 1)])
             for j in range(self.num):
                 if j != i:
-                    distant[cnt] = (self.position[i] - self.position[j]).norm()
-                    index[cnt] = j
+                    self.distant[i, cnt] = (self.position[i] - self.position[j]).norm()
+                    self.index[i, cnt] = j
                     cnt += 1
-            result_indices = self.k_smallest_with_indices(distant)
+            self.k_smallest_with_indices(i)
             for j in range(self.topo_num):
                 self.neighbors_num[i] = self.topo_num
-                self.neighbors[i, result_indices[j]] = index[j]
+                self.neighbors[i, j] = self.index[i, self.indices[i, j]]
+

@@ -16,11 +16,12 @@ class Flock:
         self.acceleration = ti.Vector.field(n=2, dtype=ti.f32, shape=self.num)
         self.neighbors = ti.field(int, shape=(num, neighbor_num_max))
         self.neighbors_num = ti.field(int, shape=num)
-        self.neighbor_finder = NeighborSearch(neighbor_num_max, self.num, self.position, self.distant, self.topo_num)
 
         self.init_field(self.position, pos)
         self.init_field(self.velocity, vel)
         self.init_field(self.acceleration, acc)
+
+        self.neighbor_finder = NeighborSearch(neighbor_num_max, self.num, self.position, self.distant, self.topo_num)
 
     def get_neighbors(self, search_mode):
         if search_mode == 0:
