@@ -25,6 +25,8 @@ class Flock:
     def get_neighbors(self, search_mode):
         if search_mode == 0:
             self.neighbor_finder.distant_search()
+        elif search_mode == 1:
+            self.neighbor_finder.topo_search()
         self.neighbors = self.neighbor_finder.neighbors
         self.neighbors_num = self.neighbor_finder.neighbors_num
 

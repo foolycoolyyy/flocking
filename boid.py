@@ -3,6 +3,17 @@ from flock import Flock
 import numpy as np
 
 
+@ti.func
+def set_mag(v, mag):
+    return (v / v.norm()) * mag
+
+
+@ti.func
+def limit(v, mag):
+    norm = v.norm()
+    return (v / norm) * mag if norm > 0 and norm > mag else v
+
+
 @ti.data_oriented
 class Boid(Flock):
     def __init__(self, num, dt, ali, sep, coh, max_spd, max_acc, distant=None, topo_num=None, pos=None, vel=None, acc=None):
@@ -12,17 +23,6 @@ class Boid(Flock):
         self.coh = coh
         self.max_spd = max_spd
         self.max_acc = max_acc
-        print("args:", "num", self.num, "dt", self.dt, "ali", self.ali, "sep", self.sep, "coh", self.coh, "max_spd", self.max_spd,
-              "max_acc",self.max_acc)
-
-    @ti.func
-    def set_mag(self, v, mag):
-        return (v / v.norm()) * mag
-
-    @ti.func
-    def limit(self, v, mag):
-        norm = v.norm()
-        return (v / norm) * mag if norm > 0 and norm > mag else v
 
     @ti.func
     def clear_acc(self):
@@ -43,15 +43,18 @@ class Boid(Flock):
                 separation += (self.position[i] - self.position[j]) / self.distant
                 cohesion += self.position[j]
             if n > 0:
-                alignment = self.limit(
-                    self.set_mag((alignment / n), self.max_spd) - self.velocity[i],
+                alignment = limit(
+                    set_mag((alignment / n), self.max_spd) - self.velocity[i],
                     self.max_acc) * self.ali
-                separation = self.limit(
-                    self.set_mag((separation / n), self.max_spd) - self.velocity[i],
+                separation = limit(
+                    set_mag((separation / n), self.max_spd) - self.velocity[i],
                     self.max_acc) * self.sep
-                cohesion = self.limit(
-                    self.set_mag(((cohesion / n) - self.position[i]), self.max_spd) -
+                cohesion = limit(
+                    set_mag(((cohesion / n) - self.position[i]), self.max_spd) -
                     self.velocity[i], self.max_acc) * self.coh
                 self.acceleration[i] += alignment
                 self.acceleration[i] += separation
                 self.acceleration[i] += cohesion
+
+    def wrapped(self):
+        self.compute_force()
