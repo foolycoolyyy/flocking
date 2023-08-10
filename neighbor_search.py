@@ -20,7 +20,7 @@ class NeighborSearch:
         self.neighbors_num = ti.field(int, shape=num)
 
         # topo_search temp
-        self.distant = ti.field(ti.f32, shape=(num, num-1))
+        self.distant = ti.field(ti.f64, shape=(num, num-1))
         self.index = ti.field(int, shape=(num, num-1))
         self.indices = ti.field(int, shape=(num, num-1))
 

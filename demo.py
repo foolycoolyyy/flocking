@@ -16,17 +16,18 @@ def random_vector(n):
 
 
 if __name__ == "__main__":
-    ti.init(arch=ti.gpu,  random_seed=int(time.time()))
+    ti.init(arch=ti.gpu,  random_seed=int(time.time()), default_fp=ti.f64)
 
     WINDOW_HEIGHT = 540
     AR = 1
     WINDOW_WIDTH = AR * WINDOW_HEIGHT
 
-    N = 5000
+    N = 2000
 
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
-    rule = 0
+    rule = 1
+    search_mode = 1
 
     if rule == 0:
         rng = default_rng(seed=42)
@@ -38,7 +39,7 @@ if __name__ == "__main__":
                     vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32)
                     )
         while gui.running:
-            boid.get_neighbors(1)
+            boid.get_neighbors(search_mode)
             boid.wrapped()
             boid.update()
             boid.edge()
@@ -46,14 +47,15 @@ if __name__ == "__main__":
     elif rule == 1:
         rng = default_rng(seed=42)
         viscek = Viscek(N, 1e-2,
-                        35, 9,
-                        distant=0.15,
+                        0.01, 0.002, 0.005, 0.008,  # r0, rb, re, ra
+                        0.3, 1.0,
+                        distant=0.15, topo_num=20,
                         pos=rng.random(size=(N, 2), dtype=np.float32),
                         vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32)
                         )
 
         while gui.running:
-            viscek.get_neighbors(0)
+            viscek.get_neighbors(search_mode)
             viscek.wrapped()
             viscek.update()
             viscek.edge()

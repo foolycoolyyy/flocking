@@ -6,22 +6,22 @@ from neighbor_search import NeighborSearch
 @ti.data_oriented
 class Flock:
     def __init__(self, num, dt, distant=None, topo_num=None, pos=None, vel=None, acc=None):
-        neighbor_num_max = 1000
+        self.neighbor_num_max = 1000
         self.num = num
         self.dt = dt
         self.distant = distant
         self.topo_num = topo_num
-        self.position = ti.Vector.field(n=2, dtype=ti.f32, shape=self.num)
-        self.velocity = ti.Vector.field(n=2, dtype=ti.f32, shape=self.num)
-        self.acceleration = ti.Vector.field(n=2, dtype=ti.f32, shape=self.num)
-        self.neighbors = ti.field(int, shape=(num, neighbor_num_max))
+        self.position = ti.Vector.field(n=2, dtype=ti.f64, shape=self.num)
+        self.velocity = ti.Vector.field(n=2, dtype=ti.f64, shape=self.num)
+        self.acceleration = ti.Vector.field(n=2, dtype=ti.f64, shape=self.num)
+        self.neighbors = ti.field(int, shape=(num, self.neighbor_num_max))
         self.neighbors_num = ti.field(int, shape=num)
 
         self.init_field(self.position, pos)
         self.init_field(self.velocity, vel)
         self.init_field(self.acceleration, acc)
 
-        self.neighbor_finder = NeighborSearch(neighbor_num_max, self.num, self.position, self.distant, self.topo_num)
+        self.neighbor_finder = NeighborSearch(self.neighbor_num_max, self.num, self.position, self.distant, self.topo_num)
 
     def get_neighbors(self, search_mode):
         if search_mode == 0:
@@ -65,3 +65,13 @@ class Flock:
             gui.show()
         else:
             gui.show(filename)
+
+    def change_topo_num(self, nc_gauss):
+        self.topo_num = nc_gauss
+
+    def change_distant(self, distant_gauss):
+        self.distant = distant_gauss
+
+    def update_neighbor_finder(self):
+        self.neighbor_finder = NeighborSearch(self.neighbor_num_max, self.num, self.position, self.distant, self.topo_num)
+
