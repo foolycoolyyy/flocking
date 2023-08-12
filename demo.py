@@ -22,11 +22,11 @@ if __name__ == "__main__":
     AR = 1
     WINDOW_WIDTH = AR * WINDOW_HEIGHT
 
-    N = 2000
+    N = 5
 
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
-    rule = 1
+    rule = 0
     search_mode = 1
 
     if rule == 0:
@@ -34,9 +34,10 @@ if __name__ == "__main__":
         boid = Boid(N, 1e-2,
                     2.0, 2.0, 2.0,
                     1, 0.5,
-                    distant=0.15, topo_num=49,
+                    distant=0.15, topo_num=2,
                     pos=rng.random(size=(N, 2), dtype=np.float32),
-                    vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32)
+                    vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
+                    angle=2.5
                     )
         while gui.running:
             boid.get_neighbors(search_mode)
@@ -49,9 +50,10 @@ if __name__ == "__main__":
         viscek = Viscek(N, 1e-2,
                         0.01, 0.002, 0.005, 0.008,  # r0, rb, re, ra
                         0.3, 1.0,
-                        distant=0.15, topo_num=20,
+                        distant=0.02, topo_num=2,
                         pos=rng.random(size=(N, 2), dtype=np.float32),
-                        vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32)
+                        vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
+                        angle=1.0
                         )
 
         while gui.running:

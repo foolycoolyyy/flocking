@@ -16,8 +16,8 @@ def limit(v, mag):
 
 @ti.data_oriented
 class Boid(Flock):
-    def __init__(self, num, dt, ali, sep, coh, max_spd, max_acc, distant=None, topo_num=None, pos=None, vel=None, acc=None):
-        super().__init__(num, dt, distant, topo_num, pos, vel, acc)
+    def __init__(self, num, dt, ali, sep, coh, max_spd, max_acc, distant=None, topo_num=None, pos=None, vel=None, acc=None, angle=None):
+        super().__init__(num, dt, distant, topo_num, pos, vel, acc, angle)
         self.ali = ali
         self.sep = sep
         self.coh = coh

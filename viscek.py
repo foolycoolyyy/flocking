@@ -20,8 +20,8 @@ def normalized(v):
 
 @ti.data_oriented
 class Viscek(Flock):
-    def __init__(self, num, dt, r0, rb, re, ra, J, beta, distant=None, topo_num=None, pos=None, vel=None, acc=None):
-        super().__init__(num, dt, distant, topo_num, pos, vel, acc)
+    def __init__(self, num, dt, r0, rb, re, ra, J, beta, distant=None, topo_num=None, pos=None, vel=None, acc=None, angle=None):
+        super().__init__(num, dt, distant, topo_num, pos, vel, acc, angle)
         self.v0 = ti.field(ti.f64, shape=())
         self.r0 = r0
         self.rb = rb

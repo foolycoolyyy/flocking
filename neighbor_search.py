@@ -9,6 +9,8 @@ class NeighborSearch:
                  position,
                  distant=None,
                  topo_num=None,
+                 angle=None,
+                 velocity=None
                  ):
         self.neighbor_num_max = neighbor_num_max
         self.num = num
@@ -18,21 +20,37 @@ class NeighborSearch:
         self.neighbors = ti.field(int, shape=(num, neighbor_num_max))
         self.neighbors.fill(-1)
         self.neighbors_num = ti.field(int, shape=num)
+        self.view = angle
+        self.velocity = velocity
 
         # topo_search temp
         self.distant = ti.field(ti.f64, shape=(num, num-1))
         self.index = ti.field(int, shape=(num, num-1))
         self.indices = ti.field(int, shape=(num, num-1))
+        self.is_view_on = 0
 
     @ti.kernel
     def distant_search(self):
         for i in range(self.num):
             cnt = 0
             for j in range(self.num):
-                if (self.position[i] - self.position[j]).norm() < self.distant0 and i != j:
+                if (self.position[i] - self.position[j]).norm() < self.distant0 and i != j \
+                        and self.is_in_view(i, j):
                     self.neighbors[i, cnt] = j
                     cnt += 1
             self.neighbors_num[i] = cnt
+
+    @ti.func
+    def is_in_view(self, i, j) -> ti.i32:
+        flag = 1
+        if self.is_view_on == 1:
+            r = self.position[j] - self.position[i]
+            angle = ti.acos(ti.math.dot(self.velocity[i], r)/(r.norm() * self.velocity[i].norm()))
+            if angle < self.view:
+                flag = 1
+            else:
+                flag = 0
+        return flag
 
     @ti.func
     def partition_with_indices(self, m, left, right):
@@ -74,7 +92,7 @@ class NeighborSearch:
         for i in range(self.num):
             cnt = 0
             for j in range(self.num):
-                if j != i:
+                if j != i and 1:
                     self.distant[i, cnt] = (self.position[i] - self.position[j]).norm()
                     self.index[i, cnt] = j
                     cnt += 1
@@ -82,4 +100,10 @@ class NeighborSearch:
             for j in range(self.topo_num):
                 self.neighbors_num[i] = self.topo_num
                 self.neighbors[i, j] = self.index[i, self.indices[i, j]]
+
+    def change_topo_num(self, n):
+        self.topo_num = n
+
+    def change_distant(self, dis):
+        self.distant = dis
 
