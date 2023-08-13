@@ -1,6 +1,20 @@
 import taichi as ti
 import numpy as np
+from numpy.random import default_rng
 from neighbor_search import NeighborSearch
+
+
+def random_vector(n):
+    components = [np.random.normal() for _ in range(n)]
+    r = np.sqrt(sum(x * x for x in components))
+    v = np.array([x / r for x in components])
+    return v
+
+
+@ti.kernel
+def field_copy(src: ti.template(), dst: ti.template()):
+    for I in ti.grouped(src):
+        dst[I] = src[I]
 
 
 @ti.data_oriented
@@ -31,9 +45,9 @@ class Flock:
         if search_mode == 0:
             self.neighbor_finder.distant_search()
         elif search_mode == 1:
-            self.neighbor_finder.topo_search()
-        self.neighbors = self.neighbor_finder.neighbors
-        self.neighbors_num = self.neighbor_finder.neighbors_num
+            self.neighbor_finder.topo_search(self.topo_num)
+        field_copy(self.neighbor_finder.neighbors, self.neighbors)
+        field_copy(self.neighbor_finder.neighbors_num, self.neighbors_num)
 
     def init_field(self, field, value):
         if value is not None:
@@ -76,7 +90,9 @@ class Flock:
     def change_distant(self, distant_gauss):
         self.distant = distant_gauss
 
-    def update_neighbor_finder(self):
-        self.neighbor_finder.change_distant(self.distant)
-        self.neighbor_finder.change_topo_num(self.topo_num)
-
+    def random(self):
+        rng = default_rng(seed=42)
+        pos = rng.random(size=(self.num, 2), dtype=np.float32)
+        vel = np.array([random_vector(2) for _ in range(self.num)])
+        self.init_field(self.position, pos)
+        self.init_field(self.velocity, vel)

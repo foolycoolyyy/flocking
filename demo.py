@@ -22,7 +22,7 @@ if __name__ == "__main__":
     AR = 1
     WINDOW_WIDTH = AR * WINDOW_HEIGHT
 
-    N = 5
+    N = 2000
 
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         boid = Boid(N, 1e-2,
                     2.0, 2.0, 2.0,
                     1, 0.5,
-                    distant=0.15, topo_num=2,
+                    distant=0.15, topo_num=50,
                     pos=rng.random(size=(N, 2), dtype=np.float32),
                     vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
                     angle=2.5
