@@ -1,9 +1,14 @@
+import math
+import pylab as pl
 import taichi as ti
 import numpy as np
 import time
+import progressbar
 from numpy.random import default_rng
 from viscek import Viscek
 from demo import random_vector
+from sklearn.linear_model import LinearRegression
+from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 
 
@@ -120,20 +125,20 @@ class Speculate:
 
 if __name__ == "__main__":
     ti.init(arch=ti.gpu, random_seed=int(time.time()), default_fp=ti.f64)
-    N = 512
-    advanced_num = 3000
+    N = 1024
+    advanced_num = 5000
     search_mode = 1
-    total_size = 15
-    total_begin = 10
-    sim_per_arg = 20
-    begin = 5
+    total_size = 12
+    total_begin = 6
+    sim_per_arg = 50
+    begin = 4
     nc_sim = np.arange(total_begin, total_begin + total_size)
     nc_mem = np.zeros(total_size, dtype=int)
     err = np.zeros(total_size)
     rng = default_rng(seed=42)
     viscek = Viscek(N, 1e-2,
                     0.01, 0.002, 0.005, 0.008,  # r0, rb, re, ra
-                    0.3, 1.0,
+                    0.4, 1.0,
                     distant=0.15, topo_num=nc_sim[0],
                     pos=rng.random(size=(N, 2), dtype=np.float32),
                     vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
@@ -146,6 +151,8 @@ if __name__ == "__main__":
     max_entropy = 0.0
     max_entropy_topo_num = 0
     nc_per_arg = np.zeros(sim_per_arg)
+
+    bar = progressbar.ProgressBar(max_value=total_size * sim_per_arg)
 
     for k in range(total_size):
         viscek.change_topo_num(nc_sim[k])
@@ -173,12 +180,20 @@ if __name__ == "__main__":
                     max_entropy_topo_num = i + begin
 
             nc_per_arg[j] = max_entropy_topo_num
+            bar.update(k * sim_per_arg + j + 1)
 
-        err[k] = np.std(nc_per_arg) / np.sqrt(len(nc_per_arg))
+        err[k] = np.std(nc_per_arg) / math.sqrt(len(nc_per_arg))
         nc_mem[k] = np.sum(nc_per_arg) / len(nc_per_arg)
 
     plt.errorbar(nc_sim, nc_mem, err, ecolor='k', elinewidth=0.5, marker='o', mfc='blue',
                  mec='k', mew=1, ms=10, alpha=1, capsize=5, capthick=3, linestyle="none")
+    model = LinearRegression()
+    Sim = nc_sim.reshape(-1, 1)
+    Mem = nc_mem.reshape(-1, 1)
+    model.fit(Sim, Mem)
+    print("Coefficient (slope):", model.coef_[0][0])
+    print("Intercept:", model.intercept_[0])
+    plt.plot(nc_sim, model.predict(Sim), color="black", label='Regression Line')
     plt.xlabel("nc_sim")
     plt.ylabel("nc_mem")
     plt.show()

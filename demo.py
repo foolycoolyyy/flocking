@@ -22,12 +22,12 @@ if __name__ == "__main__":
     AR = 1
     WINDOW_WIDTH = AR * WINDOW_HEIGHT
 
-    N = 2000
+    N = 3000
 
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
-    rule = 0
-    search_mode = 1
+    rule = 1
+    search_mode = 0
 
     if rule == 0:
         rng = default_rng(seed=42)
@@ -49,8 +49,8 @@ if __name__ == "__main__":
         rng = default_rng(seed=42)
         viscek = Viscek(N, 1e-2,
                         0.01, 0.002, 0.005, 0.008,  # r0, rb, re, ra
-                        0.3, 1.0,
-                        distant=0.02, topo_num=2,
+                        0.4, 1.0,
+                        distant=0.03, topo_num=12,
                         pos=rng.random(size=(N, 2), dtype=np.float32),
                         vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
                         angle=1.0
