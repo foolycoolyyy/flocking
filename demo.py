@@ -27,7 +27,7 @@ if __name__ == "__main__":
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
     rule = 1
-    search_mode = 0
+    search_mode = 1
 
     if rule == 0:
         rng = default_rng(seed=42)
@@ -47,12 +47,12 @@ if __name__ == "__main__":
             boid.render(gui, AR)
     elif rule == 1:
         rng = default_rng(seed=42)
-        viscek = Viscek(N, 1e-2,
+        viscek = Viscek(N, 1,
                         0.01, 0.002, 0.005, 0.008,  # r0, rb, re, ra
                         0.4, 1.0,
                         distant=0.03, topo_num=12,
                         pos=rng.random(size=(N, 2), dtype=np.float32),
-                        vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
+                        vel=np.array([random_vector(2)*0.01 for _ in range(N)], dtype=np.float32),
                         angle=1.0
                         )
 

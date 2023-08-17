@@ -2,6 +2,7 @@ import math
 import pylab as pl
 import taichi as ti
 import numpy as np
+import cupy as cp
 import time
 import progressbar
 from numpy.random import default_rng
@@ -85,11 +86,13 @@ class Speculate:
                     self.A[i, j] = -self.n[i, j]
 
     def compute_entropy(self):
-        eig, v = np.linalg.eig(self.A_np)
+        A_gpu = cp.asarray(self.A_np)
+        eig_gpu = cp.linalg.eigvalsh(A_gpu)
+        eig = cp.asnumpy(eig_gpu)
         log_Z = self.flock.num * self.J[None] * self.nc[None] / 2
         for i in range(1, self.flock.num):
             if eig[i] > 0:
-                log_Z -= np.log(self.J[None] * eig[i])
+                log_Z -= np.log(self.J[None] * eig[i].real)
         self.entropy[None] = -log_Z + 0.5 * self.J[None] * self.flock.num * self.nc[None] * self.C_int[None]
 
     @ti.kernel
