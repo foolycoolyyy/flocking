@@ -22,7 +22,7 @@ if __name__ == "__main__":
     AR = 1
     WINDOW_WIDTH = AR * WINDOW_HEIGHT
 
-    N = 3000
+    N = 2000
 
     gui = ti.GUI("flocking behavior", res=(WINDOW_WIDTH, WINDOW_HEIGHT))
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         boid = Boid(N, 1e-2,
                     2.0, 2.0, 2.0,
                     1, 0.5,
-                    distant=0.15, topo_num=50,
+                    distant=0.1, topo_num=20,
                     pos=rng.random(size=(N, 2), dtype=np.float32),
                     vel=np.array([random_vector(2) for _ in range(N)], dtype=np.float32),
                     angle=2.5
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         viscek = Viscek(N, 1,
                         0.01, 0.002, 0.005, 0.008,  # r0, rb, re, ra
                         0.4, 1.0,
-                        distant=0.03, topo_num=12,
+                        distant=0.10, topo_num=12,
                         pos=rng.random(size=(N, 2), dtype=np.float32),
                         vel=np.array([random_vector(2)*0.01 for _ in range(N)], dtype=np.float32),
                         angle=1.0

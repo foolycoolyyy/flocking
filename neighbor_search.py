@@ -1,4 +1,5 @@
 import taichi as ti
+import numpy as np
 
 
 @ti.data_oriented
@@ -7,12 +8,12 @@ class NeighborSearch:
                  neighbor_num_max,
                  num,
                  position,
-                 distant=None,
-                 topo_num=None,
+                 distant,
+                 topo_num,
                  angle=None,
                  velocity=None
                  ):
-        self.neighbor_num_max = neighbor_num_max
+        self.neighbor_num_max = num
         self.num = num
         self.position = position
         self.distant0 = distant
@@ -20,21 +21,112 @@ class NeighborSearch:
         self.neighbors = ti.field(int, shape=(num, neighbor_num_max))
         self.neighbors.fill(-1)
         self.neighbors_num = ti.field(int, shape=num)
+        self.neighbors_num.fill(0)
         self.view = angle
         self.velocity = velocity
 
         # topo_search temp
         self.distant_temp = ti.field(dtype=ti.f64, shape=(num, num-1))
-        self.index = ti.field(int, shape=(num, num-1))
+        self.index = ti.field(int, shape=(num, neighbor_num_max))
         self.indices = ti.field(int, shape=(num, num-1))
-        self.is_view_on = 0
+        self.is_view_on = 1
+
+        # grid
+        self.support_radius = self.distant0
+        self.grid_size = 2 * self.support_radius
+        self.grid_per_line = int(np.ceil(1.0 / self.grid_size))
+        self.grid_num = self.grid_per_line ** 2
+        self.max_grid_particles_num = 10000
+        self.grid_particles_num = ti.field(int, shape=self.grid_num)
+        self.grid_particles = ti.field(int, shape=(self.grid_num, self.max_grid_particles_num))
+        self.grid_particles_num.fill(0)
+        self.grid_particles.fill(-1)
+        self.offset = ti.field(int, shape=(self.num, self.grid_num))
+        self.width = ti.field(int, shape=self.num)
+        self.count = ti.field(int, shape=self.num)
+
+    @ti.func
+    def pos_to_index(self, pos):
+        ret = 0
+        for i in range(2):
+            j = 1 - i
+            ret *= self.grid_per_line
+            ret += int(pos[j] / self.grid_size)
+        return ret
 
     @ti.kernel
-    def distant_search(self):
+    def allocate_particles_to_grid(self):
+        for p in range(self.num):
+            cell = self.pos_to_index(self.position[p])
+            offset = ti.atomic_add(self.grid_particles_num[cell], 1)
+            self.grid_particles[cell, offset] = p
+
+    @ti.func
+    def grid_around(self, cell, width, p_i):
+        center_row = int(cell / self.grid_per_line)
+        center_col = cell % self.grid_per_line
+        for i in range(center_row - width, center_row + width + 1):
+            for j in range(center_col - width, center_col + width + 1):
+                row = i % self.grid_per_line
+                col = j % self.grid_per_line
+                index = (i - (center_row - width)) * (2 * width + 1) + (j - (center_col - width))
+                self.offset[p_i, index] = row * self.grid_per_line + col
+
+    @ti.func
+    def width_check(self, width, p_i):
+        center_cell = self.pos_to_index(self.position[p_i])
+        cnt = 0
+        radius = self.support_radius + self.grid_size * (width - 1)
+        self.grid_around(center_cell, width, p_i)
+        for k in range((1 + 2 * width) ** 2):
+            cell = self.offset[p_i, k]
+            for j in range(self.grid_particles_num[cell]):
+                p_j = self.grid_particles[cell, j]
+                distance = (self.position[p_i] - self.position[p_j]).norm()
+                if p_i != p_j and distance < radius\
+                        and self.is_in_view(p_i, p_j):
+                    self.distant_temp[p_i, cnt] = distance
+                    self.index[p_i, cnt] = p_j
+                    cnt += 1
+        return cnt
+
+    @ti.kernel
+    def grid_distant_search(self):
+        for p_i in range(self.num):
+            center_cell = self.pos_to_index(self.position[p_i])
+            width = 1
+            self.grid_around(center_cell, width, p_i)
+            self.neighbors_num[p_i] = self.width_check(1, p_i)
+            for cnt in range(self.neighbors_num[p_i]):
+                self.neighbors[p_i, cnt] = self.index[p_i, cnt]
+
+    def grid_distant_search_wrapped(self):
+        self.allocate_particles_to_grid()
+        self.grid_distant_search()
+
+    @ti.kernel
+    def grid_topo_search(self):
+        for p_i in range(self.num):
+            self.count[p_i] = 0
+            self.width[p_i] = 0
+            while self.count[p_i] < self.topo_num:
+                self.width[p_i] += 1
+                self.count[p_i] = self.width_check(self.width[p_i], p_i)
+            self.k_smallest_with_indices(p_i, self.topo_num, self.count[p_i])
+            self.neighbors_num[p_i] = self.topo_num
+            for j in range(self.topo_num):
+                self.neighbors[p_i, j] = self.index[p_i, self.indices[p_i, j]]
+
+    def grid_topo_search_wrapped(self):
+        self.allocate_particles_to_grid()
+        self.grid_topo_search()
+
+    @ti.kernel
+    def distant_search(self, distant: ti.f64):
         for i in range(self.num):
             cnt = 0
             for j in range(self.num):
-                if (self.position[i] - self.position[j]).norm() < self.distant0 and i != j \
+                if (self.position[i] - self.position[j]).norm() < distant and i != j \
                         and self.is_in_view(i, j):
                     self.neighbors[i, cnt] = j
                     cnt += 1
@@ -74,8 +166,8 @@ class NeighborSearch:
             self.indices[i, j] = j
 
     @ti.func
-    def k_smallest_with_indices(self, i, topo_num):
-        left, right = 0, self.num - 1 - 1
+    def k_smallest_with_indices(self, i, topo_num, size):
+        left, right = 0, size - 1
         self.init_indices(i)
         while left <= right:
             pivot_index = self.partition_with_indices(i, left, right)
@@ -92,18 +184,13 @@ class NeighborSearch:
         for i in range(self.num):
             cnt = 0
             for j in range(self.num):
-                if j != i and 1:
+                if j != i and self.is_in_view(i, j):
                     self.distant_temp[i, cnt] = (self.position[i] - self.position[j]).norm()
                     self.index[i, cnt] = j
                     cnt += 1
-            self.k_smallest_with_indices(i, topo_num)
+            self.k_smallest_with_indices(i, topo_num, self.num - 1)
             for j in range(topo_num):
                 self.neighbors_num[i] = topo_num
                 self.neighbors[i, j] = self.index[i, self.indices[i, j]]
 
-    def change_topo_num(self, n):
-        self.topo_num = n
-
-    def change_distant(self, dis):
-        self.distant0 = dis
 

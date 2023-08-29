@@ -37,13 +37,12 @@ class Flock:
         self.init_field(self.acceleration, acc)
 
         self.neighbor_finder = NeighborSearch(
-            self.neighbor_num_max, self.num, self.position, self.distant,
-            self.topo_num, self.angle, self.velocity
+            self.neighbor_num_max, self.num, self.position, self.distant, self.topo_num, self.angle, self.velocity
         )
 
     def get_neighbors(self, search_mode):
         if search_mode == 0:
-            self.neighbor_finder.distant_search()
+            self.neighbor_finder.distant_search(self.distant)
         elif search_mode == 1:
             self.neighbor_finder.topo_search(self.topo_num)
         field_copy(self.neighbor_finder.neighbors, self.neighbors)
