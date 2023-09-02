@@ -42,9 +42,9 @@ class Flock:
 
     def get_neighbors(self, search_mode):
         if search_mode == 0:
-            self.neighbor_finder.distant_search(self.distant)
+            self.neighbor_finder.distant_search(self.distant, self.angle)
         elif search_mode == 1:
-            self.neighbor_finder.topo_search(self.topo_num)
+            self.neighbor_finder.topo_search(self.topo_num, self.angle)
         field_copy(self.neighbor_finder.neighbors, self.neighbors)
         field_copy(self.neighbor_finder.neighbors_num, self.neighbors_num)
 
@@ -88,6 +88,9 @@ class Flock:
 
     def change_distant(self, distant_gauss):
         self.distant = distant_gauss
+
+    def change_angle(self, angle_gauss):
+        self.angle = angle_gauss
 
     def random(self):
         rng = default_rng(seed=42)
